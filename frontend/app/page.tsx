@@ -32,6 +32,7 @@ const Home = () => {
   const [chatRoom, setChatRoom] = useState<string[]>([]);
   const [chatGroupName, setChatGroupName] = useState<string>("");
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     console.log("Socket Information", socket);
@@ -158,6 +159,12 @@ const Home = () => {
     socket.emit("createChatRoom", { roomName: chatGroupName });
   };
 
+  const handleUnsendMessage = (messageId: string) => {
+    // Emit a socket event to inform the server to unsend the message
+    console.log("Unsend Message", messageId)
+    socket.emit("unsendMessage", { messageId });
+  };
+
   const renderMessages = () => {
     return chatMessage.map((message: Message, index: number) => (
       <div
@@ -167,8 +174,8 @@ const Home = () => {
         } justify-center p-2 my-1`}
       >
         {message.role === "Admin" ? (
-          <div className="flex items-center justify-center">
-            <span className="font-bold">{message.message}</span>
+          <div className="w-full flex items-center justify-center">
+            <span className="font-bold text-center">{message.message}</span>
           </div>
         ) : (
           <div
@@ -180,12 +187,19 @@ const Home = () => {
               {message.name !== name ? `${message.name} :` : "Me :"}
             </span>{" "}
             {message.message}
+            {message.name === name && (
+              <button
+                className="ml-2 text-sm text-red-500"
+                onClick={() => handleUnsendMessage(message.messageId.toString())}
+              >
+                Unsend
+              </button>
+          )}
           </div>
         )}
       </div>
     ));
   };
-  
 
   return (
     <div className="w-full h-full">
@@ -201,7 +215,15 @@ const Home = () => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter something..."
+                placeholder="Enter your name..."
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)} // Define setPassword state hook
+                placeholder="Enter your password..."
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 required
               />
