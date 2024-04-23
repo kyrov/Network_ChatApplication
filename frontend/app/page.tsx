@@ -6,6 +6,7 @@ import { Accordion, AccordionItem } from "@nextui-org/react";
 import { Textarea } from "@nextui-org/react";
 import { ScrollShadow } from "@nextui-org/react";
 import { Input } from "@nextui-org/react";
+import { it } from "node:test";
 
 export interface User {
   name: string;
@@ -16,7 +17,7 @@ export interface Message {
   name: string;
   message: string;
   role: string;
-  messageId: string;
+  messageID: string;
 }
 
 // current messageID
@@ -45,7 +46,7 @@ const Home = () => {
   }, []);
 
   socket.on("message", (message: Message) => {
-    console.log("Message Received");
+    console.log("Message Received ID", message.messageID);
     setChatMessage([...chatMessage, message]);
   });
 
@@ -61,10 +62,21 @@ const Home = () => {
     setChatRoom([...roomHistory]);
   });
 
+  socket.on("finishUnsendMessage", (messageId: string) => {
+    console.log("Finish Unsend Message", messageId);
+    for (let i = 0; i < chatMessage.length; i++) {
+      if (chatMessage[i].messageID === messageId) {
+        chatMessage[i].message = "This message has been deleted";
+      }
+    }
+    setChatMessage([...chatMessage]);
+  });
+
   socket.on("chatHistory", (chatHistory: Message[]) => {
     // console.log("Chat History", chatHistory.toString());
     // concat chatMessage and chatHistory
     for (let i = 0; i < chatHistory.length; i++) {
+      console.log("Chat History", chatHistory[i].message, chatHistory[i].role, chatHistory[i].name, chatHistory[i].messageID);
       if (chatHistory[i].role === "Admin") {
         if (chatHistory[i].name === name){
           chatHistory[i].message = "You have joined the Chat Room"
@@ -131,7 +143,6 @@ const Home = () => {
       alert("Input field is required!");
       return;
     }
-    console.log(">>>>>>>>>>>>>>>>>> Sent Message", name, chat);
     socket.emit("getCurrentMessageID");
     flag_message = false;
     while (!flag_message) {
@@ -143,6 +154,7 @@ const Home = () => {
       role: "User",
       messageId: messageId,
     });
+    console.log(">>>>>>>>>>>>>>>>>> Sent Message", name, chat, messageId);
     setChat(""); // Clear chat input after sending
   };
 
@@ -161,7 +173,7 @@ const Home = () => {
 
   const handleUnsendMessage = (messageId: string) => {
     // Emit a socket event to inform the server to unsend the message
-    console.log("Unsend Message", messageId)
+    console.log("Unsending Message ID:", messageId)
     socket.emit("unsendMessage", { messageId });
   };
 
@@ -190,7 +202,10 @@ const Home = () => {
             {message.name === name && (
               <button
                 className="ml-2 text-sm text-red-500"
-                onClick={() => handleUnsendMessage(message.messageId.toString())}
+                onClick={() => {
+                  console.log("Message ID:", message.messageID);
+                  handleUnsendMessage(message.messageID);
+                }}
               >
                 Unsend
               </button>

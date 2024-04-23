@@ -36,6 +36,10 @@ module.exports.createMessage = async (room, name, message, role, messageID) => {
     return await chat.save();
 }
 
+module.exports.unsendMessage = async (messageID) => {
+    return await Chat.updateMany({ messageID: messageID }, { message: "This message has been deleted" });
+}
+
 module.exports.getUser = async (name) => {
     return await User.findOne({ name: name });
 }

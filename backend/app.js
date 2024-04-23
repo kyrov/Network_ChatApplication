@@ -5,7 +5,7 @@ const { fileURLToPath } = require("url");
 
 const connectDB = require("./db.js");
 
-const { createUser, createMessage, getMessages, getAllRoom, createRoom, getLastMessage } = require("./functions.js");
+const { createUser, createMessage, getMessages, getAllRoom, createRoom, getLastMessage, unsendMessage } = require("./functions.js");
 const chat = require("./models/chat.js");
 const { get, set } = require("mongoose");
 const { create } = require("./models/users.js");
@@ -97,6 +97,13 @@ io.on("connection", async (socket) => {
     createMessage(room, name, message, role, messageId);
 
     io.to(room).emit("message", { name, message, role, messageId });
+  });
+
+  socket.on("unsendMessage", async ({ messageId }) => {
+    console.log(`User wants to unsend message with id ${messageId}`);
+    await unsendMessage(messageId);
+    // emit unsend message to all clients
+    io.emit("finishUnsendMessage", messageId);
   });
 
   // combat phantom socket
