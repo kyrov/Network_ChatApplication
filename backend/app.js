@@ -5,7 +5,7 @@ const { fileURLToPath } = require("url");
 
 const connectDB = require("./db.js");
 
-const { createUser, createMessage, getMessages, getAllRoom, createRoom, getCurrentMessageID } = require("./functions.js");
+const { createUser, createMessage, getMessages, getAllRoom, createRoom, getLastMessage } = require("./functions.js");
 const chat = require("./models/chat.js");
 const { get, set } = require("mongoose");
 const { create } = require("./models/users.js");
@@ -71,6 +71,11 @@ io.on("connection", async (socket) => {
     console.log("current message ID back", messageID);
     socket.emit("currentMessageID", (messageID++).toString());
   });
+
+  const lastMessage = await getLastMessage();
+  if (lastMessage) {
+    messageID = parseInt(lastMessage.messageID) + 1;
+  }
 
   // create user
   socket.on("create user", async ({ name, password }) => {
