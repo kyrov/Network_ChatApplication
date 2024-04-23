@@ -96,7 +96,12 @@ io.on("connection", async (socket) => {
     // create message to db
     createMessage(room, name, message, role, messageId);
 
-    io.to(room).emit("message", { name, message, role, messageId });
+    io.to(room).emit("message", { 
+      name: name, 
+      message: message, 
+      role: role, 
+      messageID: messageId 
+    });
   });
 
   socket.on("unsendMessage", async ({ messageId }) => {

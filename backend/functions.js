@@ -56,3 +56,11 @@ module.exports.createRoom = async (roomName) => {
 
     return await room.save();
 }
+
+module.exports.verifyUser = async (name, password) => {
+    const user = await User.findOne({ name: name});
+    if (user) {
+        return user.password === password;
+    }
+    return false;
+}

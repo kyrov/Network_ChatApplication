@@ -204,6 +204,11 @@ const Home = () => {
                 className="ml-2 text-sm text-red-500"
                 onClick={() => {
                   console.log("Message ID:", message.messageID);
+                  //print all message in chatMessage
+                  for (let i = 0; i < chatMessage.length; i++) {
+                    console.log("Message :", chatMessage[i].message, chatMessage[i].role, chatMessage[i].name, chatMessage[i].messageID);
+                  }
+                   
                   handleUnsendMessage(message.messageID);
                 }}
               >
