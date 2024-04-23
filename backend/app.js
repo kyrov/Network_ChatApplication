@@ -5,7 +5,7 @@ const { fileURLToPath } = require("url");
 
 const connectDB = require("./db.js");
 
-const { createUser, createMessage, getMessages, getAllRoom, createRoom, getLastMessage, unsendMessage } = require("./functions.js");
+const { createUser, createMessage, getMessages, getAllRoom, createRoom, getLastMessage, unsendMessage, verifyUser } = require("./functions.js");
 const chat = require("./models/chat.js");
 const { get, set } = require("mongoose");
 const { create } = require("./models/users.js");
@@ -206,6 +206,13 @@ io.on("connection", async (socket) => {
     CleanUpUserList(disconnectedUser);
     console.log("A socket has disconnected", OnlineUsersState.OnlineUsers);
     io.emit("OnlineUsers", OnlineUsersState.OnlineUsers);
+  });
+
+  socket.on("verifyUser", async ({ name, password }) => {
+    console.log(`User ${name} is verifying their account`);
+    const user = await verifyUser(name, password);
+    console.log("Login status", user);
+    socket.emit("verifyUser", user);
   });
 
   socket.on("logout", ({ name, id }) => {

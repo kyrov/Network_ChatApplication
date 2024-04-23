@@ -23,17 +23,19 @@ export interface Message {
 // current messageID
 let messageId = "0";
 let flag_message = false;
+let flag_login = false;
+let pass_login = false;
 
 const Home = () => {
   const [stage, setStage] = useState(1);
   const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [chat, setChat] = useState("");
   const [chatMessage, setChatMessage] = useState<Message[]>([]);
   const [chatRoom, setChatRoom] = useState<string[]>([]);
   const [chatGroupName, setChatGroupName] = useState<string>("");
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
-  const [password, setPassword] = useState("");
 
   useEffect(() => {
     console.log("Socket Information", socket);
@@ -99,13 +101,32 @@ const Home = () => {
     setOnlineUsers(onlineUsers);
   });
 
-  const handleLogin = () => {
+  socket.on("verifyUser", (pass) => {
+    console.log("Verify User status", pass);
+    pass_login = pass;
+    flag_login = true;
+  });
+
+  const handleLogin = async () => {
     if (!name.trim()) {
       alert("Input field is required!");
       return;
     }
     if (onlineUsers.find((user: User) => user.name === name)) {
       alert("There is already a user with this name!");
+      return;
+    }
+    flag_login = false;
+    socket.emit("verifyUser", { name: name, password: password });
+    while (!flag_login) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    if (pass_login) {
+      console.log("Login as", name);
+      socket.emit("login", { name: name, id: socket.id });
+      setStage(2);
+    } else {
+      alert("Password is incorrect!");
       return;
     }
     console.log("Login as", name);

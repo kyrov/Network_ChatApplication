@@ -59,6 +59,7 @@ module.exports.createRoom = async (roomName) => {
 
 module.exports.verifyUser = async (name, password) => {
     const user = await User.findOne({ name: name});
+    console.log(">>>>>>>>>>>>>>>>>>>>>>> user", user.name, "password", password, "user.password", user.password);
     if (user) {
         return user.password === password;
     }
