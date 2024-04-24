@@ -7,6 +7,7 @@ import { Textarea } from "@nextui-org/react";
 import { ScrollShadow } from "@nextui-org/react";
 import { Input } from "@nextui-org/react";
 
+
 export interface User {
   name: string;
   id: string;
@@ -16,8 +17,12 @@ export interface Message {
   name: string;
   message: string;
   role: string;
-  messageId: number;
+  messageId: string;
 }
+
+// current messageID
+let messageId = "0";
+let flag_message = false;
 
 const Home = () => {
   const [stage, setStage] = useState(1);
@@ -27,6 +32,15 @@ const Home = () => {
   const [chatMessage, setChatMessage] = useState<Message[]>([]);
   const [chatRoom, setChatRoom] = useState<string[]>([]);
   const [chatGroupName, setChatGroupName] = useState<string>("");
+  const [chatHistory, setChatHistory] = useState<Message[]>([]);
+  const [dark, setDark] = useState(false);
+  const [password, setPassword] = useState("");
+
+
+  const darkModeHandler = () => {
+      setDark(!dark);
+      document.body.classList.toggle("dark");
+  }
 
   useEffect(() => {
     console.log("Socket Information", socket);
@@ -39,7 +53,37 @@ const Home = () => {
   }, []);
 
   socket.on("message", (message: Message) => {
+    console.log("Message Received");
     setChatMessage([...chatMessage, message]);
+  });
+
+  socket.on("currentMessageID", (id: string) => {
+    console.log("Current Message ID front", id);
+    messageId = id;
+    flag_message = true;
+  });
+
+
+  socket.on("roomHistory", (roomHistory: string[]) => {
+    console.log("Room History", roomHistory);
+    setChatRoom([...roomHistory]);
+  });
+
+  socket.on("chatHistory", (chatHistory: Message[]) => {
+    // console.log("Chat History", chatHistory.toString());
+    // concat chatMessage and chatHistory
+    for (let i = 0; i < chatHistory.length; i++) {
+      if (chatHistory[i].role === "Admin") {
+        if (chatHistory[i].name === name){
+          chatHistory[i].message = "You have joined the Chat Room"
+        } else {
+          console.log("Name", chatHistory[i].name, name);
+          chatHistory[i].message = chatHistory[i].name + " has joined the Chat Room";
+        }
+        
+      }
+    }
+    setChatMessage([...chatMessage, ...chatHistory]);
   });
 
   socket.on("createChatRoom", (data: string[]) => {
@@ -71,29 +115,41 @@ const Home = () => {
     setChatMessage([]);
     setStage(1);
   };
+  
   const handleJoinPrivateChat = (user: User) => {
     console.log("Private Chat");
     console.log(name, "want to connect to", user.name);
     const roomName =
-      name.localeCompare(user.name) > 0
+      name.localeCompare(user.name) < 0
         ? "private_" + name + user.name
         : "private_" + user.name + name;
     socket.emit("joinChatRoom", { name: name, roomName: roomName });
     setChatMessage([]);
   };
+
   const handleJoinGroupChat = (roomName: string) => {
     console.log("Group Chat");
     console.log(name, "want to connect to room name", roomName);
-    socket.emit("joinChatRoom", { name: name, roomName: "public_" + roomName });
     setChatMessage([]);
+    socket.emit("joinChatRoom", { name: name, roomName: "public_" + roomName });
   };
-  const handleSentMessage = () => {
-    console.log("Sent Message", name, chat);
+  
+  const handleSentMessage = async () => {
+    if (chat.trim() === "") {
+      alert("Input field is required!");
+      return;
+    }
+    console.log(">>>>>>>>>>>>>>>>>> Sent Message", name, chat);
+    socket.emit("getCurrentMessageID");
+    flag_message = false;
+    while (!flag_message) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
     socket.emit("message", {
       name: name,
       message: chat,
       role: "User",
-      messageId: 0,
+      messageId: messageId,
     });
     setChat(""); // Clear chat input after sending
   };
@@ -120,8 +176,8 @@ const Home = () => {
         } justify-center p-2 my-1`}
       >
         {message.role === "Admin" ? (
-          <div className="flex items-center justify-center">
-            <span className="font-bold">{message.message}</span>
+          <div className="w-full flex items-center justify-center">
+            <span className="font-bold text-center">{message.message}</span>
           </div>
         ) : (
           <div
@@ -133,18 +189,31 @@ const Home = () => {
               {message.name !== name ? `${message.name} :` : "Me :"}
             </span>{" "}
             {message.message}
+            {message.name === name && (
+              <button
+                className="ml-2 text-sm text-red-500"
+                onClick={() => handleUnsendMessage(message.messageId.toString())}
+              >
+                Unsend
+              </button>
+          )}
           </div>
         )}
       </div>
     ));
   };
   
+  const handleUnsendMessage = (messageId: string) => {
+    // Emit a socket event to inform the server to unsend the message
+    console.log("Unsend Message", messageId)
+    socket.emit("unsendMessage", { messageId });
+  };
 
   return (
     <div className="w-full h-full">
       {/* Login page */}
       {stage === 1 && (
-        <div className="w-full h-full bg-[#E0E7FF]">
+        <div className="w-full h-full">
           <main className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
             <div className="flex flex-col space-y-4 w-[630px] rounded-md border bg-white px-12 py-6 shadow-lg">
               <p className="my-6 text-center text-3xl font-bold italic text-indigo-700">
@@ -154,7 +223,15 @@ const Home = () => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter something..."
+                placeholder="Enter your name..."
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)} // Define setPassword state hook
+                placeholder="Enter your password..."
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 required
               />
@@ -239,6 +316,7 @@ const Home = () => {
             >
               Logout
             </button>
+
           </div>
 
           <div className="h-full w-full bg-black flex flex-col">
